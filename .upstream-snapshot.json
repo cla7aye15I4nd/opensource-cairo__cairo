@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "target": "cla7aye15I4nd/opensource-cairo__cairo",
+  "canonical_upstream": "https://gitlab.freedesktop.org/cairo/cairo",
+  "source": {
+    "kind": "git",
+    "upstream_url": "https://gitlab.freedesktop.org/cairo/cairo.git",
+    "branch": "master",
+    "revision": "74755964edef651691d5cd36ff140108298e4e6e"
+  },
+  "publication_review": {
+    "license_files": [
+      "COPYING",
+      "COPYING-LGPL-2.1",
+      "COPYING-MPL-1.1",
+      "perf/COPYING",
+      "test/COPYING",
+      "util/COPYING",
+      "util/cairo-script/COPYING",
+      "util/cairo-trace/COPYING",
+      "util/cairo-trace/COPYING-GPL-3"
+    ],
+    "notice_files": [
+      "AUTHORS"
+    ],
+    "public_fixture_key_markers": []
+  },
+  "upstream_tree_sha256": "c9820cc582c7d5af5132ca6cd515beba539968b8625d3a681ccf7385bd442441",
+  "tree_sha256": "6ed439ad987c88396bceebbda0cbb330abff3bdc22de17dfb3362d9354be06f2"
+}
