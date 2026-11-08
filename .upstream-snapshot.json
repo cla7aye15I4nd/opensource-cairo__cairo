@@ -6,7 +6,7 @@
     "kind": "git",
     "upstream_url": "https://gitlab.freedesktop.org/cairo/cairo.git",
     "branch": "master",
-    "revision": "74755964edef651691d5cd36ff140108298e4e6e"
+    "revision": "07adef44b00a9765e9bdb92c4e6f3772debc83c2"
   },
   "publication_review": {
     "license_files": [
@@ -25,6 +25,6 @@
     ],
     "public_fixture_key_markers": []
   },
-  "upstream_tree_sha256": "c9820cc582c7d5af5132ca6cd515beba539968b8625d3a681ccf7385bd442441",
-  "tree_sha256": "6ed439ad987c88396bceebbda0cbb330abff3bdc22de17dfb3362d9354be06f2"
+  "upstream_tree_sha256": "2c372912f92850bad093ebdf5532b0157cbc8c06db34d74fdce5b7800abbd8a2",
+  "tree_sha256": "5d6bd803755c8743dddf00837b97c6d16b741445a7d59f1ece02cee53fd50496"
 }

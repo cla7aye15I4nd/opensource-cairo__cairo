@@ -68,12 +68,15 @@
 #define SOF15 0xcf
 
 static const unsigned char *
-_jpeg_skip_segment (const unsigned char *p)
+_jpeg_skip_segment (const unsigned char *p, const unsigned char *end)
 {
     int len;
 
     p++;
     len = (p[0] << 8) | p[1];
+
+    if (len > end - p)
+	return end;
 
     return p + len;
 }
@@ -125,7 +128,7 @@ _cairo_image_info_get_jpeg_info (cairo_image_info_t	*info,
 	case SOF14:
 	case SOF15:
 	    /* Start of frame found. Extract the image parameters. */
-	    if (p + 8 > data + length)
+	    if (p + 9 > data + length)
 		return CAIRO_INT_STATUS_UNSUPPORTED;
 
 	    _jpeg_extract_info (info, p);
@@ -140,12 +143,13 @@ _cairo_image_info_get_jpeg_info (cairo_image_info_t	*info,
 	    if (p + 3 > data + length)
 		return CAIRO_INT_STATUS_UNSUPPORTED;
 
-	    p = _jpeg_skip_segment (p);
+	    p = _jpeg_skip_segment (p, data + length);
 	    break;
 	}
     }
 
-    return CAIRO_STATUS_SUCCESS;
+    /* No start of frame found. */
+    return CAIRO_INT_STATUS_UNSUPPORTED;
 }
 
 /* JPEG 2000 (image/jp2)
@@ -161,16 +165,40 @@ static const unsigned char _jpx_signature[] = {
     0x00, 0x00, 0x00, 0x0c, 0x6a, 0x50, 0x20, 0x20, 0x0d, 0x0a, 0x87, 0x0a
 };
 
+/* Returns the length of the box starting at p, or 0 if the box is
+ * invalid or does not fit in the data. */
+static size_t
+_jpx_box_length (const unsigned char *p, const unsigned char *end)
+{
+    uint32_t length;
+
+    if (p + 8 > end)
+	return 0;
+
+    length = get_unaligned_be32 (p);
+
+    /* A length of 0 means that the box extends to the end of the data. */
+    if (length == 0)
+	return end - p;
+
+    /* A length of 1 means that a 64-bit length follows the box type.
+     * Such boxes are not supported, nor are the reserved lengths 2
+     * to 7. */
+    if (length < 8 || length > (size_t) (end - p))
+	return 0;
+
+    return length;
+}
+
 static const unsigned char *
 _jpx_next_box (const unsigned char *p, const unsigned char *end)
 {
-    if (p + 4 < end) {
-	uint32_t length = get_unaligned_be32 (p);
-	if (p + length < end)
-	    return p + length;
-    }
+    size_t length = _jpx_box_length (p, end);
 
-    return end;
+    if (length == 0)
+	return end;
+
+    return p + length;
 }
 
 static const unsigned char *
@@ -182,15 +210,7 @@ _jpx_get_box_contents (const unsigned char *p)
 static cairo_bool_t
 _jpx_match_box (const unsigned char *p, const unsigned char *end, uint32_t type)
 {
-    uint32_t length;
-
-    if (p + 8 < end) {
-	length = get_unaligned_be32 (p);
-	if (get_unaligned_be32 (p + 4) == type &&  p + length < end)
-	    return TRUE;
-    }
-
-    return FALSE;
+    return _jpx_box_length (p, end) != 0 && get_unaligned_be32 (p + 4) == type;
 }
 
 static const unsigned char *
@@ -320,7 +340,7 @@ _jbig2_find_data_end (const unsigned char *p,
 		end_seq[1] = 0xac;
 	    }
 	    p += 18;
-	    while (p < end) {
+	    while (p + 1 < end) {
 		if (p[0] == end_seq[0] && p[1] == end_seq[1]) {
 		    /* Skip the 2 terminating bytes and the 4 byte row count that follows. */
 		    p += 6;
@@ -344,9 +364,10 @@ _jbig2_get_next_segment (const unsigned char  *p,
 {
     unsigned long seg_num;
     cairo_bool_t big_page_size;
-    int num_segs;
-    int ref_seg_bytes;
-    int referred_size;
+    uint32_t num_segs;
+    size_t ref_seg_bytes;
+    size_t referred_size;
+    size_t header_len;
 
     if (p + 6 >= end)
 	return NULL;
@@ -365,7 +386,6 @@ _jbig2_get_next_segment (const unsigned char  *p,
     } else {
 	ref_seg_bytes = 1;
     }
-    p += ref_seg_bytes;
 
     if (seg_num <= 256)
 	referred_size = 1;
@@ -374,11 +394,16 @@ _jbig2_get_next_segment (const unsigned char  *p,
     else
 	referred_size = 4;
 
-    p += num_segs * referred_size;
-    p += big_page_size ? 4 : 1;
-    if (p + 4 >= end)
+    /* Skip the referred-to segment count and retention flags, the
+     * referred-to segment numbers and the page association. num_segs
+     * is less than 2^29, so header_len is at most 0x84000004 and
+     * header_len + 4 does not overflow, even with a 32-bit size_t. */
+    header_len = ref_seg_bytes + num_segs * referred_size +
+		 (big_page_size ? 4 : 1);
+    if (header_len + 4 >= (size_t) (end - p))
 	return NULL;
 
+    p += header_len;
     *data_len = get_unaligned_be32 (p);
     p += 4;
     *data = p;
@@ -391,13 +416,13 @@ _jbig2_get_next_segment (const unsigned char  *p,
 
 	*data_len = p - *data;
     } else {
+	if (*data_len >= (size_t) (end - p))
+	    return NULL;
+
 	p += *data_len;
     }
 
-    if (p < end)
-	return p;
-    else
-	return NULL;
+    return p;
 }
 
 static void
