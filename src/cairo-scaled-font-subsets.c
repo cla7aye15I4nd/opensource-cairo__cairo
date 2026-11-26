@@ -929,6 +929,7 @@ _cairo_scaled_font_subsets_map_glyph (cairo_scaled_font_subsets_t	*subsets,
                                                       &identity,
                                                       &identity,
                                                       &font_options);
+            _cairo_font_options_fini (&font_options);
 	    if (unlikely (unscaled_font->status))
 		return unscaled_font->status;
 

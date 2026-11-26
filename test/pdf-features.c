@@ -147,3 +147,43 @@ CAIRO_TEST (pdf_features,
 	    NULL, /* requirements */
 	    0, 0,
 	    preamble, NULL)
+
+static cairo_test_status_t
+font_variations (cairo_test_context_t *ctx)
+{
+    cairo_surface_t *surface;
+    cairo_font_options_t *options;
+    cairo_status_t status;
+    cairo_t *cr;
+    int i;
+
+    surface = cairo_pdf_surface_create (NULL, 32, 32);
+    cr = cairo_create (surface);
+    cairo_select_font_face (cr, CAIRO_TEST_FONT_FAMILY " Sans",
+			    CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    options = cairo_font_options_create ();
+    cairo_font_options_set_variations (options, "wght=600,wdth=90");
+    cairo_set_font_options (cr, options);
+    cairo_font_options_destroy (options);
+
+    for (i = 0; i < 2; i++) {
+	cairo_move_to (cr, 1, 12);
+	cairo_show_text (cr, "AB");
+	cairo_show_page (cr);
+    }
+    status = cairo_status (cr);
+    cairo_destroy (cr);
+    cairo_surface_finish (surface);
+    if (status == CAIRO_STATUS_SUCCESS)
+	status = cairo_surface_status (surface);
+    cairo_surface_destroy (surface);
+
+    return cairo_test_status_from_status (ctx, status);
+}
+
+CAIRO_TEST (pdf_font_variations,
+	    "Replay and subset glyphs with font variations on successive PDF pages",
+	    "pdf, font, leak", /* keywords */
+	    NULL, /* requirements */
+	    0, 0,
+	    font_variations, NULL)

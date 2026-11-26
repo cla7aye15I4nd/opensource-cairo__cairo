@@ -508,6 +508,7 @@ _cairo_surface_wrapper_show_text_glyphs (cairo_surface_wrapper_t    *wrapper,
 					      dev_clip);
  FINISH:
     _cairo_clip_destroy (dev_clip);
+    _cairo_font_options_fini (&options);
     if (dev_glyphs != stack_glyphs)
 	free (dev_glyphs);
     if (dev_scaled_font != scaled_font)

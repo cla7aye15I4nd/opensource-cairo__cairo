@@ -60,3 +60,43 @@ CAIRO_TEST (leaks_set_scaled_font,
 	    NULL, /* requirements */
 	    1, 1,
 	    NULL, leaks_set_scaled_font)
+
+static cairo_test_status_t
+replay_font_variations (cairo_test_context_t *ctx)
+{
+    cairo_surface_t *recording, *image;
+    cairo_font_options_t *options;
+    cairo_status_t status;
+    cairo_t *cr;
+
+    recording = cairo_recording_surface_create (CAIRO_CONTENT_COLOR_ALPHA, NULL);
+    cr = cairo_create (recording);
+    options = cairo_font_options_create ();
+    cairo_font_options_set_variations (options, "wght=600");
+    cairo_set_font_options (cr, options);
+    cairo_font_options_destroy (options);
+    cairo_move_to (cr, 1, 12);
+    cairo_show_text (cr, "A");
+    status = cairo_status (cr);
+    cairo_destroy (cr);
+
+    image = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 32, 32);
+    cr = cairo_create (image);
+    cairo_scale (cr, 2, 2);
+    cairo_set_source_surface (cr, recording, 0, 0);
+    cairo_paint (cr);
+    if (status == CAIRO_STATUS_SUCCESS)
+	status = cairo_status (cr);
+    cairo_destroy (cr);
+    cairo_surface_destroy (image);
+    cairo_surface_destroy (recording);
+
+    return cairo_test_status_from_status (ctx, status);
+}
+
+CAIRO_TEST (leaks_replay_font_variations,
+	    "Replay recorded glyphs with font variations onto an image",
+	    "leak, font, recording", /* keywords */
+	    NULL, /* requirements */
+	    0, 0,
+	    replay_font_variations, NULL)
